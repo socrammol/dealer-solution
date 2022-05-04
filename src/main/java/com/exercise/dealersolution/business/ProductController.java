@@ -1,14 +1,14 @@
 package com.exercise.dealersolution.business;
 
-import com.exercise.dealersolution.exception.ProdutoNaoEncontradoException;
-import com.exercise.dealersolution.repository.Product;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
+
+import com.exercise.dealersolution.model.ProductEntrada;
+import com.exercise.dealersolution.model.ProductSaida;
+import com.exercise.dealersolution.service.ProductServices;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,83 +22,69 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/dealer")
 public class ProductController {
 
-  private Product product;
+  @Autowired
+  ProductServices productServices;
 
-  public ProductController(Product product) {
-    this.product = product;
+
+  public ProductController() {
   }
 
   @GetMapping("/models")
-  public Map<Integer, String[]> retrieveAll() {
-    return product.todos();
+  public List<ProductSaida> retrieveAll() {
+    return productServices.findAll();
   }
 
   @GetMapping("/models/available")
-  public List<List<String>> getAll() {
-    ArrayList<List<String>> disponiveis = new ArrayList<>();
-    ArrayList<String> item = new ArrayList<>();
-    final Map<Integer, String[]> availableProducts = product.getAvailableProducts();
+  public List<ProductSaida> getAll() {
 
-    availableProducts.forEach((integer, strings) -> {
-      item.add(integer.toString());
-      for (String string : strings) {
-        item.add(string);
-      }
-      disponiveis.add(item);
-    });
-
-    return disponiveis;
+    return productServices.findAvaliables();
   }
 
   @GetMapping("/models/{id}")
-  public LocalDate retrieveDeadline(String id) {
-    final Map<Integer, String[]> integerMap = product.retrieveUnavailable();
+  public String retrieveDeadline(@PathVariable String id) {
 
-    final String[] strings = integerMap.get(new Integer(id));
-
-    if (strings.length == 0) {
-      throw new ProdutoNaoEncontradoException();
-    }
-
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy");
-
-    return LocalDate.parse(strings[4], formatter);
+    return productServices.findDeadLine(id);
   }
 
-  @PostMapping("/models/new/{id}")
-  public void addNewProductModel(@PathVariable Integer productModelId, @RequestBody String s) {
-    final Map<Integer, String[]> map = product.todos();
-    final String[] strings = s.split(",");
-    map.put(productModelId, strings);
-    product.save(strings);
+  @PostMapping("/models/new")
+  public void addNewProductModel( @RequestBody ProductEntrada s) {
+    productServices.save(s);
   }
 
   @PostMapping("/models")
-  public void apagarItens(@RequestBody String s) {
-    for (String str : s.split(",")) {
-      product.remove(str);
-    }
+  public void apagarItens(@RequestBody List<ProductEntrada> productEntrada) {
+
+    productServices.deleteItens(productEntrada);
   }
 
   @PostMapping("/models/{produto}")
-  public void delete(@PathVariable String produto) {
-    product.remove(produto);
+  public void delete(@PathVariable ProductEntrada produto) {
+
+    productServices.deleteItem(produto);
   }
 
   @PatchMapping("/model/{id}")
-  public void updateProduct(@PathVariable Integer productModelId, @RequestBody String product) {
-    final Map<Integer, String[]> map = this.product.todos();
-    final String[] strings = product.split(",");
-    map.put(productModelId, strings);
-    this.product.updateProducts(map);
+  public void updateProduct(@RequestBody ProductEntrada product) {
+    productServices.updateProduct(product);
   }
 
   @PutMapping("/model/{id}/{price}")
-  public void updateProductPrice(@PathVariable Integer productModelId, @PathVariable Double price) {
-    String[] p = this.product.getProduct(productModelId);
-    p[3] = price.toString();
-    Map<Integer, String[]> newValues = new HashMap<>();
-    newValues.put(productModelId, p);
-    this.product.updateProducts(newValues);
+  public void updateProductPrice(@PathVariable Long productModelId, @PathVariable Double price) {
+    productServices.updateProductPrice(productModelId,price);
+  }
+
+  @GetMapping("/model/orderbydeadline")
+  public List<ProductSaida> buscarDeadLineOrdenado(){
+    return productServices.findaAllByDeadLineOerder();
+  }
+
+  @GetMapping("/model/orderbyitens")
+  public List<ProductSaida> buscarItensOrdenado(){
+    return productServices.findaAllByItensOerder();
+  }
+
+  @GetMapping("/model/orderbyprice")
+  public List<ProductSaida> buscarpriceOrdenado(){
+    return productServices.findaAllBypriceOerder();
   }
 }
